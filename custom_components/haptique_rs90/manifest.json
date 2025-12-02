@@ -1,0 +1,13 @@
+{
+  "domain": "haptique_rs90",
+  "name": "Haptique RS90 Remote",
+  "codeowners": ["@daangel27"],
+  "config_flow": true,
+  "dependencies": ["mqtt"],
+  "documentation": "https://github.com/daangel27/haptique_rs90",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "mqtt": ["Haptique/+/status"],
+  "requirements": [],
+  "version": "1.0.0"
+}

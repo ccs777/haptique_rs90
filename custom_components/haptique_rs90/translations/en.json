@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Haptique RS90",
+        "description": "Remote detected: {remote_id}\n\nGive your remote a name (optional).",
+        "data": {
+          "name": "Remote name (optional)"
+        }
+      }
+    },
+    "error": {
+      "mqtt_not_configured": "MQTT is not configured. Please configure MQTT before adding this integration.",
+      "no_remote_found": "No Haptique RS90 remote found. Make sure it is connected and publishing to MQTT."
+    },
+    "abort": {
+      "already_configured": "This remote is already configured",
+      "mqtt_not_configured": "MQTT is not configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Haptique RS90 Options",
+        "description": "Modify remote settings",
+        "data": {
+          "name": "Remote name"
+        }
+      }
+    }
+  }
+}

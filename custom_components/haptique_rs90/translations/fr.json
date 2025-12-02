@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurer Haptique RS90",
+        "description": "Télécommande détectée : {remote_id}\n\nDonnez un nom à votre télécommande (optionnel).",
+        "data": {
+          "name": "Nom de la télécommande (optionnel)"
+        }
+      }
+    },
+    "error": {
+      "mqtt_not_configured": "MQTT n'est pas configuré. Veuillez configurer MQTT avant d'ajouter cette intégration.",
+      "no_remote_found": "Aucune télécommande Haptique RS90 trouvée. Assurez-vous qu'elle est connectée et publie sur MQTT."
+    },
+    "abort": {
+      "already_configured": "Cette télécommande est déjà configurée",
+      "mqtt_not_configured": "MQTT n'est pas configuré"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options Haptique RS90",
+        "description": "Modifier les paramètres de la télécommande",
+        "data": {
+          "name": "Nom de la télécommande"
+        }
+      }
+    }
+  }
+}

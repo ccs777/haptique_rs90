@@ -1,0 +1,70 @@
+# Services disponibles pour l'intégration Haptique RS90
+
+trigger_macro:
+  name: Déclencher une macro
+  description: Déclenche une macro spécifique sur la télécommande Haptique RS90
+  fields:
+    device_id:
+      name: Appareil
+      description: L'appareil Haptique RS90 à contrôler
+      required: true
+      selector:
+        device:
+          integration: haptique_rs90
+    macro_name:
+      name: Nom de la macro
+      description: Le nom exact de la macro à déclencher
+      required: true
+      example: "Watch TV 1"
+      selector:
+        text:
+
+trigger_device_command:
+  name: Déclencher une commande d'appareil
+  description: Déclenche une commande spécifique pour un appareil sur la télécommande
+  fields:
+    device_id:
+      name: Appareil
+      description: L'appareil Haptique RS90 à contrôler
+      required: true
+      selector:
+        device:
+          integration: haptique_rs90
+    device_name:
+      name: Nom de l'appareil
+      description: Le nom exact de l'appareil (ex. "Canal - G9 4K")
+      required: true
+      example: "Canal - G9 4K"
+      selector:
+        text:
+    command_name:
+      name: Nom de la commande
+      description: Le nom exact de la commande à envoyer (ex. "POWER")
+      required: true
+      example: "POWER"
+      selector:
+        text:
+
+get_diagnostics:
+  name: Obtenir les diagnostics
+  description: Affiche les informations de diagnostic dans les logs (devices, macros, subscriptions)
+  fields:
+    device_id:
+      name: Appareil
+      description: L'appareil Haptique RS90 à diagnostiquer
+      required: true
+      selector:
+        device:
+          integration: haptique_rs90
+
+refresh_data:
+  name: Actualiser les données
+  description: Force la mise à jour des données (devices, macros, batterie)
+  fields:
+    device_id:
+      name: Appareil
+      description: L'appareil Haptique RS90 à actualiser
+      required: true
+      selector:
+        device:
+          integration: haptique_rs90
