@@ -29,6 +29,7 @@ async def async_setup_entry(
     """Set up Haptique RS90 sensor platform."""
     coordinator: HaptiqueRS90Coordinator = hass.data[DOMAIN][entry.entry_id]
     
+    # Base sensors (always present)
     entities = [
         HaptiqueRS90BatterySensor(coordinator, entry),
         HaptiqueRS90LastKeySensor(coordinator, entry),
@@ -36,7 +37,43 @@ async def async_setup_entry(
         HaptiqueRS90DeviceListSensor(coordinator, entry),
     ]
     
+    # Create a sensor for each device with its commands
+    devices = coordinator.data.get("devices", [])
+    for device in devices:
+        device_name = device.get("name")
+        if device_name:
+            entities.append(HaptiqueRS90DeviceCommandsSensor(coordinator, entry, device_name))
+            _LOGGER.debug("Created commands sensor for device: %s", device_name)
+    
     async_add_entities(entities)
+    
+    # Set up listener to add new device sensors when devices are added
+    def add_device_sensors() -> None:
+        """Add sensors for newly detected devices (sync callback)."""
+        current_devices = coordinator.data.get("devices", [])
+        new_entities = []
+        
+        # Track which devices already have sensors
+        existing_device_names = hass.data.get(DOMAIN, {}).get(f"{entry.entry_id}_device_sensors", set())
+        
+        for device in current_devices:
+            device_name = device.get("name")
+            if device_name and device_name not in existing_device_names:
+                new_entities.append(HaptiqueRS90DeviceCommandsSensor(coordinator, entry, device_name))
+                existing_device_names.add(device_name)
+                _LOGGER.info("Adding commands sensor for new device: %s", device_name)
+        
+        if new_entities:
+            async_add_entities(new_entities)
+            # Update tracking
+            hass.data.setdefault(DOMAIN, {})[f"{entry.entry_id}_device_sensors"] = existing_device_names
+    
+    # Register listener for coordinator updates (sync function)
+    entry.async_on_unload(coordinator.async_add_listener(add_device_sensors))
+    
+    # Initialize tracking
+    initial_device_names = {device.get("name") for device in devices if device.get("name")}
+    hass.data.setdefault(DOMAIN, {})[f"{entry.entry_id}_device_sensors"] = initial_device_names
 
 
 class HaptiqueRS90SensorBase(CoordinatorEntity, SensorEntity):
@@ -221,3 +258,54 @@ class HaptiqueRS90DeviceListSensor(HaptiqueRS90SensorBase):
             attributes[f"device_{idx}"] = name
         
         return attributes
+
+
+class HaptiqueRS90DeviceCommandsSensor(HaptiqueRS90SensorBase):
+    """Sensor for displaying commands of a specific device."""
+
+    def __init__(
+        self,
+        coordinator: HaptiqueRS90Coordinator,
+        entry: ConfigEntry,
+        device_name: str,
+    ) -> None:
+        """Initialize the device commands sensor."""
+        # Use device name as part of sensor type for uniqueness
+        # Sanitize device name for entity_id
+        sanitized_name = device_name.lower()
+        sanitized_name = sanitized_name.replace(' ', '_')
+        sanitized_name = sanitized_name.replace('-', '_')
+        sanitized_name = sanitized_name.replace('/', '_')
+        sanitized_name = sanitized_name.replace('+', '_')
+        sanitized_name = sanitized_name.replace('#', '_')
+        
+        sensor_type = f"commands_{sanitized_name}"
+        super().__init__(coordinator, entry, sensor_type)
+        self._device_name = device_name
+        self._attr_name = f"{device_name} Commands"
+        self._attr_icon = "mdi:remote"
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of commands for this device."""
+        commands = self.coordinator.data.get("device_commands", {}).get(self._device_name, [])
+        return len(commands)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return command names as attributes."""
+        commands = self.coordinator.data.get("device_commands", {}).get(self._device_name, [])
+        command_names = [cmd.get("name") for cmd in commands if cmd.get("name")]
+        
+        attributes = {
+            "device_name": self._device_name,
+            "command_count": len(commands),
+            "commands": command_names,  # List of all command names
+        }
+        
+        # Add each command as a separate attribute for easy access
+        for idx, name in enumerate(command_names, 1):
+            attributes[f"command_{idx}"] = name
+        
+        return attributes
+

@@ -52,6 +52,10 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
         # Path to store persistent macro states
         self._state_file = hass.config.path(f".storage/haptique_rs90_{self.remote_id}_states.json")
         
+        # Track subscribed devices and macros to handle add/remove
+        self._subscribed_devices: set[str] = set()
+        self._subscribed_macros: set[str] = set()
+        
         # Data storage
         self.data: dict[str, Any] = {
             "status": STATE_OFFLINE,
@@ -199,31 +203,50 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
 
     @callback
     def _handle_device_list(self, payload: str) -> None:
-        """Handle device list message."""
+        """Handle device list message and manage subscriptions."""
         try:
             devices = json.loads(payload)
             _LOGGER.debug("Received device list: %s", devices)
             
             # Normalize ID field (handle both "id" and "Id")
             normalized_devices = []
+            current_device_names = set()
+            
             for device in devices:
                 normalized_device = {
                     "id": device.get("id") or device.get("Id"),
                     "name": device.get("name")
                 }
                 normalized_devices.append(normalized_device)
+                device_name = normalized_device.get("name")
+                if device_name:
+                    current_device_names.add(device_name)
             
             self.data["devices"] = normalized_devices
             _LOGGER.debug("Normalized devices: %s", normalized_devices)
             
-            # Subscribe to device details for each device
-            for device in normalized_devices:
-                device_name = device.get("name")
-                if device_name:
-                    _LOGGER.info("Subscribing to details for device: %s", device_name)
-                    asyncio.create_task(
-                        self._subscribe_device_details(device_name)
-                    )
+            # Detect new devices (not yet subscribed)
+            new_devices = current_device_names - self._subscribed_devices
+            
+            # Detect removed devices (subscribed but not in current list)
+            removed_devices = self._subscribed_devices - current_device_names
+            
+            # Subscribe to new devices
+            for device_name in new_devices:
+                _LOGGER.info("🆕 New device detected: %s - subscribing to details", device_name)
+                asyncio.create_task(
+                    self._subscribe_device_details(device_name)
+                )
+                self._subscribed_devices.add(device_name)
+            
+            # Clean up removed devices
+            for device_name in removed_devices:
+                _LOGGER.info("🗑️ Device removed: %s - cleaning up", device_name)
+                self._subscribed_devices.discard(device_name)
+                # Remove commands from storage
+                if device_name in self.data["device_commands"]:
+                    del self.data["device_commands"][device_name]
+                    _LOGGER.debug("Removed commands for deleted device: %s", device_name)
             
             self.async_set_updated_data(self.data)
         except json.JSONDecodeError:
@@ -231,30 +254,52 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
 
     @callback
     def _handle_macro_list(self, payload: str) -> None:
-        """Handle macro list message."""
+        """Handle macro list message and manage subscriptions."""
         try:
             macros = json.loads(payload)
             _LOGGER.debug("Received macro list: %s", macros)
             
             # Normalize ID field (handle both "id" and "Id")
             normalized_macros = []
+            current_macro_names = set()
+            
             for macro in macros:
                 normalized_macro = {
                     "id": macro.get("id") or macro.get("Id"),
                     "name": macro.get("name")
                 }
                 normalized_macros.append(normalized_macro)
+                macro_name = normalized_macro.get("name")
+                if macro_name:
+                    current_macro_names.add(macro_name)
             
             self.data["macros"] = normalized_macros
             _LOGGER.debug("Normalized macros: %s", normalized_macros)
             
-            # Subscribe to macro triggers for state tracking
-            for macro in normalized_macros:
-                macro_name = macro.get("name")
-                if macro_name:
-                    asyncio.create_task(
-                        self._subscribe_macro_trigger(macro_name)
-                    )
+            # Detect new macros (not yet subscribed)
+            new_macros = current_macro_names - self._subscribed_macros
+            
+            # Detect removed macros (subscribed but not in current list)
+            removed_macros = self._subscribed_macros - current_macro_names
+            
+            # Subscribe to new macros
+            for macro_name in new_macros:
+                _LOGGER.info("🆕 New macro detected: %s - subscribing to trigger", macro_name)
+                asyncio.create_task(
+                    self._subscribe_macro_trigger(macro_name)
+                )
+                self._subscribed_macros.add(macro_name)
+            
+            # Clean up removed macros
+            for macro_name in removed_macros:
+                _LOGGER.info("🗑️ Macro removed: %s - cleaning up", macro_name)
+                self._subscribed_macros.discard(macro_name)
+                # Remove state from storage
+                if macro_name in self.data["macro_states"]:
+                    del self.data["macro_states"][macro_name]
+                    _LOGGER.debug("Removed state for deleted macro: %s", macro_name)
+                    # Save updated states (non-blocking)
+                    self.hass.async_create_task(self._save_macro_states())
             
             self.async_set_updated_data(self.data)
         except json.JSONDecodeError:
@@ -327,15 +372,21 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
         self.async_set_updated_data(self.data)
 
     async def _subscribe_device_details(self, device_name: str) -> None:
-        """Subscribe to device detail topic."""
-        topic = f"{self.base_topic}/device/{device_name}/detail"
+        """Subscribe to device detail/commands topics and request details."""
+        topic_commands = f"{self.base_topic}/device/{device_name}/commands"
+        topic_detail = f"{self.base_topic}/device/{device_name}/detail"
         
         @callback
         def handle_device_detail(payload: str) -> None:
             """Handle device detail message."""
+            # Ignore empty payloads (our own publish request)
+            if not payload or payload.strip() == "":
+                _LOGGER.debug("Received empty payload for device '%s' - ignoring (our request trigger)", device_name)
+                return
+            
             try:
                 commands = json.loads(payload)
-                _LOGGER.info("Received commands for device '%s': %s", device_name, commands)
+                _LOGGER.info("✓ Received %d commands for device '%s'", len(commands), device_name)
                 
                 # Normalize ID field (handle both "id" and "Id")
                 normalized_commands = []
@@ -347,13 +398,31 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
                     normalized_commands.append(normalized_command)
                 
                 self.data["device_commands"][device_name] = normalized_commands
-                _LOGGER.debug("Stored normalized commands for '%s': %s", device_name, normalized_commands)
+                _LOGGER.info("✓ Stored %d normalized commands for '%s'", len(normalized_commands), device_name)
                 self.async_set_updated_data(self.data)
             except json.JSONDecodeError as err:
                 _LOGGER.error("Failed to parse device commands for %s: %s - Error: %s", device_name, payload, err)
         
-        await self._subscribe(topic, handle_device_detail)
-        _LOGGER.info("Subscribed to device details topic: %s", topic)
+        # Subscribe to BOTH topics for compatibility
+        await self._subscribe(topic_commands, handle_device_detail)
+        _LOGGER.info("✓ Subscribed to: %s", topic_commands)
+        
+        await self._subscribe(topic_detail, handle_device_detail)
+        _LOGGER.info("✓ Subscribed to (legacy): %s", topic_detail)
+        
+        # Publish to BOTH topics to request device details (with retained=True)
+        for topic in [topic_commands, topic_detail]:
+            _LOGGER.debug("Publishing to %s to request device details", topic)
+            try:
+                await mqtt.async_publish(
+                    self.hass,
+                    topic,
+                    "",  # Empty payload to trigger details request
+                    qos=1,
+                    retain=True
+                )
+            except Exception as err:
+                _LOGGER.error("✗ Failed to publish device details request for %s: %s", device_name, err)
 
     async def _subscribe_macro_trigger(self, macro_name: str) -> None:
         """Subscribe to macro trigger topic for state tracking."""
@@ -394,12 +463,11 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
         await mqtt.async_publish(self.hass, topic, command_name, qos=1, retain=False)
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from MQTT - Request fresh battery level."""
+        """Fetch data from MQTT - Request fresh battery level and device details."""
         try:
-            _LOGGER.debug("Periodic update triggered - triggering battery level update")
+            _LOGGER.debug("Periodic update triggered - refreshing data")
             
             # Trigger battery level update by publishing to battery/status
-            # The value will be received on battery_level topic
             battery_trigger_topic = f"{self.base_topic}/{TOPIC_BATTERY_STATUS}"
             try:
                 await mqtt.async_publish(
@@ -412,6 +480,23 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Battery level trigger published to %s", battery_trigger_topic)
             except Exception as pub_err:
                 _LOGGER.error("Failed to publish battery trigger: %s", pub_err)
+            
+            # Refresh device details for all subscribed devices
+            for device_name in self._subscribed_devices:
+                # Publish to both topics for compatibility
+                for suffix in ["commands", "detail"]:
+                    detail_topic = f"{self.base_topic}/device/{device_name}/{suffix}"
+                    try:
+                        await mqtt.async_publish(
+                            self.hass,
+                            detail_topic,
+                            "",  # Empty payload to trigger refresh
+                            qos=1,
+                            retain=True
+                        )
+                        _LOGGER.debug("Device details refresh published to: %s", detail_topic)
+                    except Exception as pub_err:
+                        _LOGGER.error("Failed to publish device details refresh for %s: %s", device_name, pub_err)
             
             # Return current data (updates come via MQTT callbacks)
             return self.data
