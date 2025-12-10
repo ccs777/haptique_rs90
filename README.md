@@ -24,6 +24,11 @@ Home Assistant integration for the **Haptique RS90** universal remote via MQTT.
 </td>
 <td width="50%">
 <img src="screenshots/device_commands.png" alt="Device Commands" />
+<img src="documentation/screenshots/device_info.png" alt="Device Info" />
+<p align="center"><em>Device Information & Controls</em></p>
+</td>
+<td width="50%">
+<img src="documentation/screenshots/device_commands.png" alt="Device Commands" />
 <p align="center"><em>Device Commands List</em></p>
 </td>
 </tr>
