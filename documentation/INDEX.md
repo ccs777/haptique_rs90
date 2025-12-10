@@ -21,7 +21,6 @@ Welcome to the documentation for the Haptique RS90 Home Assistant integration.
 ## 📖 Guides
 
 - **[GUIDE_DEVICE_ID.md](GUIDE_DEVICE_ID.md)** - How to find your Home Assistant device_id
-- **[ICON_GUIDE.md](ICON_GUIDE.md)** - Integration icon setup and requirements
 - **[CONFORMITE_HAPTIQUE_MQTT.md](CONFORMITE_HAPTIQUE_MQTT.md)** - MQTT protocol compliance verification
 
 ---
@@ -84,5 +83,5 @@ Detailed view of available commands for a device (example: Canal - G9 4K with 31
 ---
 
 **Version**: 1.2.5  
-**Last Updated**: December 10, 2024  
+**Last Updated**: December 10, 2025
 **Languages**: English, Français

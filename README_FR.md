@@ -19,6 +19,10 @@ Intégration Home Assistant pour la télécommande universelle **Haptique RS90**
 <p align="center"><em>Informations et Contrôles</em></p>
 </td>
 <td width="50%">
+<img src="documentation/screenshots/device_list.png" alt="Liste appareils" />
+<p align="center"><em>Liste des appareils</em></p>
+</td>
+<td width="50%">
 <img src="documentation/screenshots/device_commands.png" alt="Commandes appareil" />
 <p align="center"><em>Liste des commandes</em></p>
 </td>
@@ -219,6 +223,36 @@ data:
 ```
 
 **Astuce :** Utilisez l'entité `sensor.commands_{device}` pour voir les commandes disponibles pour chaque appareil.
+
+---
+
+## 🎨 Templates de Dashboard
+
+Vous voulez de belles cartes télécommande ? Consultez nos **templates de dashboard** !
+
+### Template Carte Boutons Appareil
+
+Générez automatiquement une carte télécommande complète avec toutes les commandes :
+
+<table>
+<tr>
+<td width="60%">
+<img src="documentation/screenshots/device_buttons_card.png" alt="Carte boutons appareil" />
+</td>
+<td width="40%">
+<p><strong>Fonctionnalités :</strong></p>
+<ul>
+<li>✅ Boutons auto-générés</li>
+<li>✅ Style 3D avec card-mod</li>
+<li>✅ Grille responsive</li>
+<li>✅ Fonctionne avec tout appareil</li>
+</ul>
+<p><strong><a href="templates/">📖 Voir les templates →</a></strong></p>
+</td>
+</tr>
+</table>
+
+---
 
 ## 🛠️ Dépannage
 

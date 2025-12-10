@@ -15,16 +15,21 @@ Home Assistant integration for the **Haptique RS90** universal remote via MQTT.
 <table>
 <tr>
 <td width="50%">
-<img src="documentation/screenshots/device_info.png" alt="Device Info" />
+<img src="screenshots/device_info.png" alt="Device Info" />
 <p align="center"><em>Device Information & Controls</em></p>
 </td>
 <td width="50%">
-<img src="documentation/screenshots/device_commands.png" alt="Device Commands" />
+<img src="screenshots/device_list.png" alt="Device List" />
+<p align="center"><em>Device List</em></p>
+</td>
+<td width="50%">
+<img src="screenshots/device_commands.png" alt="Device Commands" />
 <p align="center"><em>Device Commands List</em></p>
 </td>
 </tr>
 </table>
 
+device_list.png
 ---
 
 ## ✨ Features
@@ -220,6 +225,36 @@ data:
 
 **Tip:** Use the `sensor.commands_{device}` entity to see available commands for each device.
 
+---
+
+## 🎨 Dashboard Templates
+
+Want beautiful remote control cards? Check out our **dashboard templates**!
+
+### Device Buttons Card Template
+
+Automatically generate a complete remote control card with all commands:
+
+<table>
+<tr>
+<td width="60%">
+<img src="documentation/screenshots/device_buttons_card.png" alt="Device Buttons Card" />
+</td>
+<td width="40%">
+<p><strong>Features:</strong></p>
+<ul>
+<li>✅ Auto-generated buttons</li>
+<li>✅ 3D styling with card-mod</li>
+<li>✅ Responsive grid layout</li>
+<li>✅ Works with any device</li>
+</ul>
+<p><strong><a href="templates/">📖 View Templates →</a></strong></p>
+</td>
+</tr>
+</table>
+
+---
+
 ## 🛠️ Troubleshooting
 
 ### Remote not detected
@@ -296,5 +331,5 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) file for 
 
 **Version:** 1.2.5  
 **Author:** daangel27  
-**Last updated:** December 2025 
+**Last updated:** December 2025  
 **Languages:** English, Français
