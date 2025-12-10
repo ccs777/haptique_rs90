@@ -29,7 +29,6 @@ Home Assistant integration for the **Haptique RS90** universal remote via MQTT.
 </tr>
 </table>
 
-device_list.png
 ---
 
 ## ✨ Features

@@ -3,7 +3,7 @@
 ## 📦 Release Package
 
 **Version**: 1.2.5
-**Release Date**: December 10, 2024
+**Release Date**: December 10, 2025
 **Package**: [haptique_rs90_v1.2.5.tar.gz](haptique_rs90_v1.2.5.tar.gz) (18 KB)
 
 ---
