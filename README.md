@@ -1,6 +1,6 @@
 # Haptique RS90 - Home Assistant Integration
 
-[![Version](https://img.shields.io/badge/version-1.2.5-blue.svg)](https://github.com/daangel27/haptique_rs90/releases)
+[![Version](https://img.shields.io/badge/version-1.2.6-blue.svg)](https://github.com/daangel27/haptique_rs90/releases)
 [![hacs](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -328,7 +328,7 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) file for 
 
 ---
 
-**Version:** 1.2.5  
+**Version:** 1.2.6  
 **Author:** daangel27  
 **Last updated:** December 2025  
 **Languages:** English, Français

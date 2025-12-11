@@ -2,6 +2,25 @@
 
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [1.2.6] - 2025-12-11
+
+### 🔧 Version de maintenance
+
+Il s'agit d'une version de maintenance avec des mises à jour de la documentation et des améliorations mineures.
+
+#### 📚 Documentation
+- Mise à jour de toutes les dates de documentation de 2024 à 2025
+- Actualisation des badges de version et des références
+- Mise à jour de l'année de copyright à 2025
+- Améliorations mineures de mise en forme
+
+#### ✨ Améliorations
+- Amélioration de la clarté du README
+- Mise à jour des exemples avec l'année actuelle
+- Amélioration de la cohérence dans toute la documentation
+
+---
+
 ## [1.2.5] - 2024-12-10
 
 ### 🎉 Changements majeurs depuis v1.2.0
@@ -129,7 +148,7 @@ Tous les changements notables de ce projet seront documentés dans ce fichier.
 
 ---
 
-## Guide de migration : 1.2.0 → 1.2.5
+## Guide de migration : 1.2.0 → 1.2.5+
 
 ### Changements incompatibles
 - ⚠️ **Entités supprimées** : `button.{name}_refresh_data` et `number.{name}_scan_interval`
