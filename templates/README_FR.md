@@ -62,8 +62,8 @@ Vous avez besoin de **3 informations** pour utiliser ce template :
 
 **Où le trouver** :
 - Même page appareil que ci-dessus
-- Regardez l'URL du navigateur : `http://homeassistant.local:8123/config/devices/device/6e99751e77b5a07de72d549143e2875a`
-- Copiez le long ID à la fin : `6e99751e77b5a07de72d549143e2875a`
+- Regardez l'URL du navigateur : `http://homeassistant.local:8123/config/devices/device/6f99751e78b5a07de72d549143e2975c`
+- Copiez le long ID à la fin : `6f99751e78b5a07de72d549143e2975c`
 
 **Méthode alternative** : Utilisez le sélecteur UI dans Services (voir [GUIDE_DEVICE_ID.md](../documentation/GUIDE_DEVICE_ID.md))
 
@@ -117,7 +117,7 @@ device_name: "Your Device Name"
 
 # Après (avec vos vraies valeurs)
 {% for cmd in state_attr('sensor.commands_canal_g9_4k', 'commands') %}
-  device_id: "6e99751e77b5a07de72d549143e2875a"
+  device_id: "6f99751e78b5a07de72d549143e2975c"
   device_name: "Canal - G9 4K"
 ```
 
@@ -304,7 +304,7 @@ Voici un exemple complet pour un appareil "Canal - G9 4K" :
 
 **1. Mes informations** :
 - Capteur : `sensor.commands_canal_g9_4k`
-- ID appareil : `6e99751e77b5a07de72d549143e2875a`
+- ID appareil : `6f99751e78b5a07de72d549143e2975c`
 - Nom appareil : `Canal - G9 4K`
 
 **2. Template avec mes valeurs** (coller dans l'Éditeur de Template) :
@@ -321,7 +321,7 @@ cards:
       action: call-service
       service: haptique_rs90.trigger_device_command
       data:
-        device_id: "6e99751e77b5a07de72d549143e2875a"
+        device_id: "6f99751e78b5a07de72d549143e2975c"
         device_name: "Canal - G9 4K"
         command_name: "{{ cmd }}"
     # ... reste du style ...

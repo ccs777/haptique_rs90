@@ -58,7 +58,7 @@
         },
         "command_name": {
           "name": "Command name",
-          "description": "The exact command name to send (use sensor 'Commands - {device}' to see available commands)"
+          "description": "The exact command name to send (check the device commands sensor to see available commands)"
         }
       }
     }

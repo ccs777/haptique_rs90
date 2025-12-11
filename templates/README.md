@@ -62,8 +62,8 @@ You need **3 pieces of information** to use this template:
 
 **Where to find it**:
 - Same device page as above
-- Look at the browser URL: `http://homeassistant.local:8123/config/devices/device/6e99751e77b5a07de72d549143e2875a`
-- Copy the long ID at the end: `6e99751e77b5a07de72d549143e2875a`
+- Look at the browser URL: `http://homeassistant.local:8123/config/devices/device/6f99751e78b5a07de72d549143e2975c`
+- Copy the long ID at the end: `6f99751e78b5a07de72d549143e2975c`
 
 **Alternative method**: Use the UI selector in Services (see [GUIDE_DEVICE_ID.md](../documentation/GUIDE_DEVICE_ID.md))
 
@@ -117,7 +117,7 @@ device_name: "Your Device Name"
 
 # After (with your actual values)
 {% for cmd in state_attr('sensor.commands_canal_g9_4k', 'commands') %}
-  device_id: "6e99751e77b5a07de72d549143e2875a"
+  device_id: "6f99751e78b5a07de72d549143e2975c"
   device_name: "Canal - G9 4K"
 ```
 
@@ -304,7 +304,7 @@ Here's a complete example for a "Canal - G9 4K" device:
 
 **1. My information**:
 - Sensor: `sensor.commands_canal_g9_4k`
-- Device ID: `6e99751e77b5a07de72d549143e2875a`
+- Device ID: `6f99751e78b5a07de72d549143e2975c`
 - Device name: `Canal - G9 4K`
 
 **2. Template with my values** (paste in Template Editor):
@@ -321,7 +321,7 @@ cards:
       action: call-service
       service: haptique_rs90.trigger_device_command
       data:
-        device_id: "6e99751e77b5a07de72d549143e2875a"
+        device_id: "6f99751e78b5a07de72d549143e2975c"
         device_name: "Canal - G9 4K"
         command_name: "{{ cmd }}"
     # ... rest of styling ...

@@ -206,7 +206,7 @@ Manually trigger a macro.
 ```yaml
 service: haptique_rs90.trigger_macro
 data:
-  device_id: "6e99751e77b5a07de72d549143e2875a"  # Your RS90 device ID
+  device_id: "6f99751e78b5a07de72d549143e2975c"  # Your RS90 device ID
   macro_name: "Watch Movie"
 ```
 
@@ -217,7 +217,7 @@ Send a command to a device.
 ```yaml
 service: haptique_rs90.trigger_device_command
 data:
-  device_id: "6e99751e77b5a07de72d549143e2875a"
+  device_id: "6f99751e78b5a07de72d549143e2975c"
   device_name: "Samsung TV"
   command_name: "POWER"
 ```
