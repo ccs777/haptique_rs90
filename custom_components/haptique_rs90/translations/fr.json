@@ -58,7 +58,7 @@
         },
         "command_name": {
           "name": "Nom de la commande",
-          "description": "Le nom exact de la commande à envoyer (utilisez le capteur 'Commands - {device}' pour voir les commandes disponibles)"
+          "description": "Le nom exact de la commande à envoyer (consultez le capteur de commandes pour voir les commandes disponibles)"
         }
       }
     }
