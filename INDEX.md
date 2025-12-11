@@ -20,8 +20,8 @@ Welcome to the documentation for the Haptique RS90 Home Assistant integration.
 
 ## 📖 Guides
 
-- **[GUIDE_DEVICE_ID.md](GUIDE_DEVICE_ID.md)** - How to find your Home Assistant device_id
-- **[CONFORMITE_HAPTIQUE_MQTT.md](CONFORMITE_HAPTIQUE_MQTT.md)** - MQTT protocol compliance verification
+- **[GUIDE_DEVICE_ID.md](documentation/GUIDE_DEVICE_ID.md)** - How to find your Home Assistant device_id
+- **[CONFORMITE_HAPTIQUE_MQTT.md](documentation/CONFORMITE_HAPTIQUE_MQTT.md)** - MQTT protocol compliance verification
 
 ---
 
