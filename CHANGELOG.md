@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.6] - 2025-12-11
+
+### 🔧 Maintenance Release
+
+This is a maintenance release with documentation updates and minor improvements.
+
+#### 📚 Documentation
+- Updated all documentation dates from 2024 to 2025
+- Refreshed version badges and references
+- Updated copyright year to 2025
+- Minor formatting improvements
+
+#### ✨ Improvements
+- Enhanced README clarity
+- Updated examples with current year
+- Improved consistency across documentation
+
+---
+
 ## [1.2.5] - 2024-12-10
 
 ### 🎉 Major Changes from v1.2.0
@@ -129,7 +148,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## Migration Guide: 1.2.0 → 1.2.5
+## Migration Guide: 1.2.0 → 1.2.5+
 
 ### Breaking Changes
 - ⚠️ **Removed entities**: `button.{name}_refresh_data` and `number.{name}_scan_interval`

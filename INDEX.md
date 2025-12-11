@@ -9,12 +9,12 @@ Welcome to the documentation for the Haptique RS90 Home Assistant integration.
 ### English
 - **[README.md](../README.md)** - Complete integration documentation
 - **[CHANGELOG.md](CHANGELOG.md)** - Full changelog with all versions
-- **[WHATS_NEW.md](WHATS_NEW.md)** - What's new in v1.2.5
+- **[WHATS_NEW.md](WHATS_NEW.md)** - What's new in v1.2.6
 
 ### Français
 - **[README_FR.md](../README_FR.md)** - Documentation complète de l'intégration
 - **[CHANGELOG_FR.md](CHANGELOG_FR.md)** - Journal complet avec toutes les versions
-- **[WHATS_NEW_FR.md](WHATS_NEW_FR.md)** - Nouveautés de la v1.2.5
+- **[WHATS_NEW_FR.md](WHATS_NEW_FR.md)** - Nouveautés de la v1.2.6
 
 ---
 
@@ -27,8 +27,8 @@ Welcome to the documentation for the Haptique RS90 Home Assistant integration.
 
 ## 🚀 Release Information
 
-- **[RELEASE_v1.2.5.md](RELEASE_v1.2.5.md)** - Complete v1.2.5 release documentation
-- **[SUMMARY_v1.2.5.md](SUMMARY_v1.2.5.md)** - Quick summary of the release package
+- **[RELEASE_v1.2.6.md](RELEASE_v1.2.6.md)** - Complete v1.2.6 release documentation
+- **[SUMMARY_v1.2.6.md](SUMMARY_v1.2.6.md)** - Quick summary of the release package
 
 ---
 
@@ -82,6 +82,6 @@ Detailed view of available commands for a device (example: Canal - G9 4K with 31
 
 ---
 
-**Version**: 1.2.5  
-**Last Updated**: December 10, 2025
+**Version**: 1.2.6  
+**Last Updated**: December 11, 2025  
 **Languages**: English, Français
