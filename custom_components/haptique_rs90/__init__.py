@@ -69,6 +69,35 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         
         _LOGGER.error("Coordinator not found for device: %s", device_id)
     
+    async def handle_refresh_lists(call):
+        """Handle the refresh_lists service call.
+        
+        Forces the integration to re-process device and macro lists
+        and subscribe to any new devices/macros that were added.
+        
+        Useful when the RS90 doesn't republish retained messages after
+        configuration changes in the Haptique Config app.
+        """
+        device_id = call.data.get("device_id")
+        
+        # Find the coordinator for this device
+        device_registry = dr.async_get(hass)
+        device_entry = device_registry.async_get(device_id)
+        
+        if not device_entry:
+            _LOGGER.error("Device not found: %s", device_id)
+            return
+        
+        # Find the config entry
+        for entry_id in device_entry.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                coordinator = hass.data[DOMAIN][entry_id]
+                _LOGGER.info("Forcing refresh of device and macro lists...")
+                await coordinator.async_force_refresh_lists()
+                return
+        
+        _LOGGER.error("Coordinator not found for device: %s", device_id)
+    
     # Register services only once
     if not hass.services.has_service(DOMAIN, "trigger_macro"):
         hass.services.async_register(
@@ -82,6 +111,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             DOMAIN,
             "trigger_device_command",
             handle_trigger_device_command,
+        )
+    
+    if not hass.services.has_service(DOMAIN, "refresh_lists"):
+        hass.services.async_register(
+            DOMAIN,
+            "refresh_lists",
+            handle_refresh_lists,
         )
 
 

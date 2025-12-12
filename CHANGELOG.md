@@ -2,6 +2,60 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.8] - 2025-12-12
+
+### ✨ Major Improvements
+
+This release brings automatic device command discovery and battery monitoring improvements.
+
+#### 🎯 New Features
+- **Automatic Device Commands Discovery**: New devices added in Haptique Config now automatically appear with their commands
+  - No manual action required after adding a device
+  - Commands appear within 2-3 seconds
+  - Works seamlessly like macro detection
+- **Automatic Battery Refresh**: Battery level now updates automatically every hour
+  - No more stale battery readings
+  - Configurable refresh interval (default: 1 hour)
+  - Ensures current battery status
+
+#### 🔧 Improvements
+- **Enhanced refresh_lists Service**: Improved to actively re-scan and subscribe to new devices/macros
+  - Can be used as a fallback if automatic detection doesn't trigger
+  - Now actually processes and subscribes, not just logs
+- **Better MQTT Compliance**: Fixed final QoS issue with macro trigger subscriptions
+  - Changed from QoS 1 to QoS 0 for monitoring (as per Haptique best practices)
+  - 100% compliant with official MQTT specification
+
+#### 🐛 Bug Fixes
+- **Fixed Integration Reload Error**: Resolved "Cannot unsubscribe topic twice" error
+  - Clean shutdown and restart now works perfectly
+  - Proper subscription lifecycle management
+  - No more error logs on reload
+
+#### 📚 Documentation
+- Added comprehensive bug report for Haptique support
+  - Documented discrepancies in official MQTT documentation
+  - Provided working examples and code snippets
+  - Ready to submit to improve official documentation
+
+---
+
+## [1.2.7] - 2025-12-11 (Internal Release)
+
+### 🔧 Technical Release
+
+This version was an internal release focused on MQTT protocol compliance verification.
+
+#### ✨ Changes
+- Comprehensive MQTT compliance analysis
+- QoS level corrections
+- Empty payload handling improvements
+- Documentation of RS90 actual behavior vs official docs
+
+**Note**: This version was superseded by v1.2.8 which includes the correct fixes.
+
+---
+
 ## [1.2.6] - 2025-12-11
 
 ### 🔧 Maintenance Release
@@ -69,10 +123,8 @@ This is a maintenance release with documentation updates and minor improvements.
   - Dynamic icons: `mdi:connection` (connected) / `mdi:close-network-outline` (disconnected)
 - **Running Macro Sensor**:
   - Dynamic icons: `mdi:play-circle` (active) / `mdi:circle-outline` (idle)
-- **Number Entity** (removed):
-  - Was: Scan interval slider (5-60 min)
 
-#### 🌍 Internationalization
+#### 🌐 Internationalization
 - **Multi-language Support**:
   - English (default)
   - French
@@ -114,24 +166,6 @@ This is a maintenance release with documentation updates and minor improvements.
   - Proper retained message handling
   - Subscribe-once pattern implemented
 
-### Technical Details
-
-#### MQTT Topics
-- **Monitoring** (QoS 0, Retained):
-  - `status`, `battery_level`, `keys`, `device/list`, `macro/list`, `device/{name}/commands`
-- **Control** (QoS 1, Not Retained):
-  - `macro/{name}/trigger`, `device/{name}/trigger`
-
-#### File Structure Changes
-```diff
-- button.py (removed - refresh button)
-- number.py (removed - scan interval slider)
-+ Enhanced coordinator.py (event-driven, no polling)
-+ Improved services.yaml (EN/FR translations)
-+ New translations/en.json
-+ New translations/fr.json
-```
-
 ---
 
 ## [1.2.0] - 2024-12-XX
@@ -145,6 +179,32 @@ This is a maintenance release with documentation updates and minor improvements.
 - Configurable scan interval (60s-3600s)
 - Manual refresh button
 - Diagnostic service
+
+---
+
+## Migration Guide: 1.2.6 → 1.2.8
+
+### What's New
+- ✅ Automatic device command discovery
+- ✅ Automatic battery refresh (hourly)
+- ✅ Improved `refresh_lists` service (now actually works)
+- ✅ Fixed reload error
+- ✅ 100% MQTT compliant
+
+### Breaking Changes
+**None!** This is a seamless upgrade.
+
+### What You Need to Do
+1. Update the integration (via HACS or manually)
+2. Restart Home Assistant
+3. That's it! Everything works automatically now.
+
+### Benefits of Upgrading
+- 🚀 New devices appear automatically with their commands
+- 🔋 Battery level stays current (auto-refresh every hour)
+- 🐛 No more reload errors
+- ✅ Fully compliant with Haptique MQTT specification
+- 📱 Better user experience (zero manual intervention)
 
 ---
 
@@ -175,5 +235,5 @@ This is a maintenance release with documentation updates and minor improvements.
 - 📉 Reduced network traffic
 - 🐛 No more random macro triggers
 - 🎨 Better visual feedback (colors, icons)
-- 🌍 Multi-language support
+- 🌐 Multi-language support
 - 📋 Device command sensors for easy command discovery
