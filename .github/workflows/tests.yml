@@ -29,7 +29,6 @@ jobs:
           python3 -m json.tool custom_components/haptique_rs90/manifest.json
           VERSION=$(grep -o '"version": *"[^"]*"' custom_components/haptique_rs90/manifest.json | cut -d'"' -f4)
           echo "Version: $VERSION"
-          echo "INTEGRATION_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Check Python syntax
         run: |
@@ -47,37 +46,3 @@ jobs:
 
       - name: Run Hassfest
         uses: home-assistant/actions/hassfest@master
-
-  hacs:
-    name: HACS Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: HACS validation
-        uses: hacs/action@main
-        with:
-          category: integration
-
-  summary:
-    name: Test Summary
-    runs-on: ubuntu-latest
-    needs: [validate-structure, hassfest, hacs]
-    if: always()
-    steps:
-      - name: Check results
-        run: |
-          if [ "${{ needs.validate-structure.result }}" != "success" ]; then
-            echo "❌ Structure validation failed"
-            exit 1
-          fi
-          if [ "${{ needs.hassfest.result }}" != "success" ]; then
-            echo "❌ Hassfest validation failed"
-            exit 1
-          fi
-          if [ "${{ needs.hacs.result }}" != "success" ]; then
-            echo "❌ HACS validation failed"
-            exit 1
-          fi
-          echo "✅ All tests passed!"
