@@ -1,92 +1,230 @@
-# Nouveautés v1.5.0
+# Nouveautés v1.7.0
 
-## ⚠️ Important : Changements incompatibles
-
-**La version 1.5.0 nécessite de mettre à jour vos automations et scripts.** Les paramètres de service ont été renommés pour plus de clarté et de stabilité.
-
-**Temps de migration estimé** : 15-30 minutes  
-**Guide de migration** : [MIGRATION_GUIDE_v1.5.0.md](MIGRATION_GUIDE_v1.5.0.md)
+**Date de sortie :** Janvier 2026  
+**Type :** Version majeure avec nouvelles fonctionnalités  
+**Changements incompatibles :** Aucun ✅
 
 ---
 
-## 🎯 Top 3 améliorations
+## 🎯 Fonctionnalités principales
 
-### 1. IDs d'entité ultra-stables 🎉
+### 1. Détection des boutons basée sur événements ⚡
 
-**Problème résolu** : Renommer un appareil/macro dans Haptique Config changeait l'entity ID dans Home Assistant, cassant les automations.
+**Problème résolu :** Appuyer deux fois sur le même bouton ne déclenchait pas les automatisations.
 
-**Maintenant** : Les entity IDs sont basés sur les IDs internes Haptique et **ne changent jamais**.
+**Maintenant :** Chaque appui de bouton déclenche un événement, même les appuis répétés !
 
-### 2. Nouveau sensor pour accès facile aux IDs 📊
-
-**Créé** : `sensor.macro_{nom}_info` pour chaque macro
-
-**Attributs** :
-- `rs90_macro_id` : L'ID stable à utiliser dans les services
-- `macro_name` : Nom actuel
-- `current_state` : État on/off
-
-### 3. Paramètres de service plus clairs 🔧
-
-**Ancien** : `device_id` (ambigu)  
-**Nouveau** : `rs90_id` (clair!)
-
----
-
-## 🔄 Ce que vous devez mettre à jour
-
-| Ancien | Nouveau |
-|--------|---------|
-| `device_id` | `rs90_id` |
-| `macro_name` | `rs90_macro_id` |
-| `device_name` | `rs90_device_id` |
-
-**Exemple rapide** :
 ```yaml
-# Avant (v1.2.8)
-service: haptique_rs90.trigger_macro
-data:
-  device_id: "abc123"
-  macro_name: "Film"
-
-# Après (v1.5.0)
-service: haptique_rs90.trigger_macro
-data:
-  rs90_id: "abc123"
-  rs90_macro_id: "692eb1561bddd5814022960c"
+automation:
+  trigger:
+    - platform: event
+      event_type: haptique_rs90_key_pressed
+      event_data:
+        button: 13
 ```
 
----
-
-## 📍 Trouver vos IDs
-
-### rs90_macro_id
-1. Trouvez `sensor.macro_{nom}_info`
-2. Regardez les attributs
-3. Copiez `rs90_macro_id`
-
-### rs90_device_id
-1. Trouvez `sensor.{nom_telecommande}_commands_{nom}`
-2. Regardez les attributs
-3. Copiez `rs90_device_id`
-
-### rs90_id
-- URL de la page de l'appareil RS90
+**Avantages :**
+- ✅ Fonctionne avec les appuis répétés
+- ✅ Double fonctionnalité : macro RS90 + automatisation HA simultanément
+- ✅ Données complètes : remote_id, device_id, button, timestamp
 
 ---
 
-## 🛠️ Étapes de migration
+### 2. Déclencheurs d'appareil (Sans YAML !) 🎮
 
-1. **Trouvez vos IDs** (5 min)
-2. **Mettez à jour les automations** (10-20 min)
-3. **Mettez à jour les templates Lovelace** (5 min)
-4. **Testez tout** (5 min)
+**Créez des automatisations visuellement** dans l'interface Home Assistant :
 
-**Guide détaillé** : [MIGRATION_GUIDE_v1.5.0.md](MIGRATION_GUIDE_v1.5.0.md)
+1. Ajouter une automatisation → Ajouter un déclencheur → **Appareil**
+2. Sélectionnez **RS90 Remote**
+3. Choisissez **Button pressed** → Sélectionnez le bouton (1-24)
+4. Ajoutez des actions → Enregistrez
+
+**C'est tout !** Pas de YAML, pas de complexité.
+
+**Avantages :**
+- ✅ 24 boutons disponibles dans le menu déroulant
+- ✅ Constructeur d'automatisations natif Home Assistant
+- ✅ Parfait pour les débutants
 
 ---
 
-**Version** : 1.5.0  
-**Date de sortie** : 18 décembre 2025  
-**Type** : Version majeure (Changements incompatibles)  
-**Migration requise** : Oui
+### 3. Synchronisation de l'état des macros 🔄
+
+**Problème résolu :** Les switches ne se mettaient pas à jour quand déclenchés depuis la télécommande RS90.
+
+**Maintenant :** Les switches affichent l'état correct quelle que soit la source !
+
+**Technique :**
+- Nouveau topic MQTT : `macro/{nom}/status` (publié par RS90)
+- Séparation propre commande/état
+- Nécessite une mise à jour firmware RS90 à venir
+
+**⚠️ Note :** Contactez le support Haptique pour la disponibilité du firmware.
+
+---
+
+### 4. Rafraîchissement intelligent de la batterie 🔋
+
+**Plusieurs améliorations :**
+
+**Rafraîchissement automatique à la reconnexion :**
+- RS90 se réveille → Niveau de batterie demandé immédiatement
+- Jusqu'à 6x plus de mises à jour fréquentes hors socle
+
+**Protection anti-spam :**
+- Minimum 5 minutes entre les rafraîchissements
+- Évite le spam lors de connexions instables
+
+**Intervalle réduit :**
+- Rafraîchissement périodique : Toutes les 30 minutes (au lieu de 60)
+
+**Fréquence de rafraîchissement :**
+- Sur socle (toujours en ligne) : Toutes les 30 min
+- Hors socle (veille/réveil ~10 min) : Toutes les ~10 min au réveil
+- Instable (<5 min reconnexion) : Max 1 par 5 min (limité)
+
+---
+
+### 5. RemoteID MQTT exposé 📍
+
+**Accès facile pour le débogage :**
+
+```yaml
+sensor.rs90_info_summary:
+  rs90_id: "9b974..."              # ID Appareil HA
+  rs90_remote_id: "3d5d95aa3a7f7b20"  # RemoteID MQTT ✨
+```
+
+Trouvez instantanément votre RemoteID MQTT pour les opérations manuelles.
+
+---
+
+## 🎉 Révolution : Double fonctionnalité
+
+**Un seul appui de bouton RS90 fait DEUX choses :**
+
+1. ✅ **Exécute la macro RS90** (contrôle IR/RF)
+2. ✅ **Déclenche l'automatisation Home Assistant** (contrôle maison intelligente)
+
+**Exemple :** Appui Bouton 13
+- 📺 Allume la TV via IR (macro RS90)
+- 💡 Tamise les lumières (automatisation HA)
+- 🔊 Configure Sonos (automatisation HA)
+- 🌡️ Ajuste le thermostat (automatisation HA)
+
+**Tout depuis UN SEUL appui !**
+
+---
+
+## 🔧 Autres améliorations
+
+- ✅ Rafraîchissement batterie ajouté au service `refresh_lists`
+- ✅ Logs améliorés pour les mises à jour de batterie
+- ✅ Coordinateur amélioré avec suivi device_id
+- ✅ Meilleurs messages d'erreur
+
+---
+
+## ⚠️ Changements incompatibles
+
+**Aucun !** Cette version est entièrement rétrocompatible avec v1.5.1.
+
+Toutes les automatisations, scripts et configurations existants continuent de fonctionner.
+
+---
+
+## 📋 Prérequis
+
+- **Home Assistant :** 2024.1.0 ou plus récent
+- **MQTT :** Configuré et fonctionnel
+- **Firmware RS90 :** Dernière version recommandée
+  - Sync état macros nécessite MAJ firmware à venir
+  - Toutes les autres fonctionnalités fonctionnent avec le firmware actuel
+
+---
+
+## 🚀 Étapes de mise à jour
+
+### Si vous utilisez HACS :
+
+1. Ouvrez **HACS** → **Intégrations**
+2. Trouvez **Haptique RS90**
+3. Cliquez sur **Mettre à jour**
+4. Redémarrez Home Assistant
+
+### Si vous utilisez l'installation manuelle :
+
+1. Téléchargez [v1.7.0](https://github.com/daangel27/haptique_rs90/releases/tag/v1.7.0)
+2. Extrayez dans `/config/custom_components/haptique_rs90/`
+3. Redémarrez Home Assistant
+
+**C'est tout !** Aucun changement de configuration nécessaire.
+
+---
+
+## 💡 Commencer avec les nouvelles fonctionnalités
+
+### Essayez les déclencheurs d'appareil (Facile)
+
+1. **Paramètres** → **Automatisations** → **Ajouter une automatisation**
+2. **Ajouter un déclencheur** → **Appareil** → Sélectionnez RS90
+3. **Button pressed** → Choisissez le numéro de bouton
+4. Ajoutez une action → Enregistrez
+5. Appuyez sur le bouton du RS90 → L'automatisation se déclenche ! 🎉
+
+### Essayez les événements (Avancé)
+
+```yaml
+automation:
+  - alias: "Bouton multi-actions"
+    trigger:
+      - platform: event
+        event_type: haptique_rs90_key_pressed
+        event_data:
+          button: 13
+    action:
+      - service: light.toggle
+        target:
+          entity_id: light.salon
+      - service: notify.mobile_app
+        data:
+          message: "Bouton 13 appuyé !"
+```
+
+### Surveillez mieux la batterie
+
+La batterie se met à jour maintenant :
+- ✅ Toutes les 30 minutes (automatique)
+- ✅ Au réveil du RS90 (automatique)
+- ✅ Via appel de service (manuel)
+
+Aucune action nécessaire - profitez simplement des mises à jour plus fréquentes !
+
+---
+
+## 📚 Documentation
+
+- **[README_FR.md](README_FR.md)** - Guide complet de l'intégration
+- **[CHANGELOG_FR.md](CHANGELOG_FR.md)** - Changements techniques détaillés
+- **[Versions GitHub](https://github.com/daangel27/haptique_rs90/releases)** - Téléchargement et notes de version
+
+---
+
+## 🙏 Remerciements
+
+Merci à :
+- **Support Haptique** pour l'implémentation du topic `/status` et l'excellente collaboration
+- **@Benz63Amg** pour avoir signalé l'issue #35 et validé la solution
+- **Communauté Home Assistant** pour les retours et tests
+
+---
+
+## 🆘 Besoin d'aide ?
+
+- 📖 [Documentation complète](README_FR.md)
+- 🐛 [Signaler des problèmes](https://github.com/daangel27/haptique_rs90/issues)
+- 💬 [Discussions](https://github.com/daangel27/haptique_rs90/discussions)
+
+---
+
+**Profitez de la v1.7.0 !** 🎉

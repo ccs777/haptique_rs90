@@ -56,7 +56,9 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
         
         # Battery refresh timer
         self._battery_refresh_timer: callable | None = None
-        self._battery_refresh_interval = 3600  # 1 hour in seconds
+        self._battery_refresh_interval = 1800  # 30 minutes in seconds
+        self._last_battery_refresh: float = 0  # Timestamp of last battery refresh
+        self._battery_refresh_min_interval = 300  # 5 minutes minimum between refreshes
         
         # LED light auto-off timer
         self._led_light_timer: callable | None = None
@@ -204,8 +206,51 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
             _LOGGER.info("Status changed: %s → %s", old_status, status)
             self.data["status"] = status
             self.async_set_updated_data(self.data)
+            
+            # Request battery update when RS90 comes back online
+            # This optimizes battery refresh for sleep/wake cycles
+            if status == STATE_ONLINE and old_status == STATE_OFFLINE:
+                _LOGGER.info("RS90 reconnected - requesting battery update")
+                asyncio.create_task(self._request_battery_update_now())
         else:
             _LOGGER.debug("Status unchanged: %s", status)
+    
+    async def _request_battery_update_now(self) -> None:
+        """Request battery update immediately (called on reconnection).
+        
+        Throttled to maximum once per 5 minutes to avoid spam if RS90
+        has unstable connection (frequent disconnect/reconnect cycles).
+        """
+        import time
+        
+        current_time = time.time()
+        time_since_last_refresh = current_time - self._last_battery_refresh
+        
+        # Throttle: minimum 5 minutes between battery refreshes
+        if time_since_last_refresh < self._battery_refresh_min_interval:
+            _LOGGER.debug(
+                "Battery refresh throttled (last refresh %.0f seconds ago, minimum %d seconds)",
+                time_since_last_refresh,
+                self._battery_refresh_min_interval
+            )
+            return
+        
+        battery_trigger_topic = f"{self.base_topic}/{TOPIC_BATTERY_STATUS}"
+        _LOGGER.debug("Battery refresh on reconnection - publishing to %s", battery_trigger_topic)
+        try:
+            await mqtt.async_publish(
+                self.hass,
+                battery_trigger_topic,
+                "",
+                qos=0,
+                retain=False
+            )
+            self._last_battery_refresh = current_time
+            _LOGGER.debug("Battery refresh request sent on reconnection")
+        except Exception as err:
+            _LOGGER.error("Failed to send battery refresh on reconnection: %s", err)
+        except Exception as err:
+            _LOGGER.error("Failed to send battery refresh on reconnection: %s", err)
 
     @callback
     def _handle_device_list(self, payload: str) -> None:
@@ -293,7 +338,7 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
             
             # Subscribe to new macros
             for macro_name in new_macros:
-                _LOGGER.info("NEW: New macro detected: %s - subscribing to trigger", macro_name)
+                _LOGGER.info("NEW: New macro detected: %s - subscribing to status", macro_name)
                 asyncio.create_task(
                     self._subscribe_macro_trigger(macro_name)
                 )
@@ -304,14 +349,14 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
                 _LOGGER.info("🗑️ Macro removed: %s - cleaning up", macro_name)
                 self._subscribed_macros.discard(macro_name)
                 
-                # Unsubscribe from this macro's trigger topic
-                trigger_topic = f"{self.base_topic}/macro/{macro_name}/trigger"
+                # Unsubscribe from this macro's status topic
+                status_topic = f"{self.base_topic}/macro/{macro_name}/status"  # Changed from trigger
                 _LOGGER.debug("Checking macro_subscriptions dict, keys: %s", list(self._macro_subscriptions.keys()))
                 if macro_name in self._macro_subscriptions:
-                    _LOGGER.debug("MQTT UNSUBSCRIBE: topic='%s'", trigger_topic)
+                    _LOGGER.debug("MQTT UNSUBSCRIBE: topic='%s'", status_topic)
                     unsubscribe_func = self._macro_subscriptions.pop(macro_name)
                     unsubscribe_func()
-                    _LOGGER.info("SUCCESS: Unsubscribed from macro trigger: %s", macro_name)
+                    _LOGGER.info("SUCCESS: Unsubscribed from macro status: %s", macro_name)
                 else:
                     _LOGGER.warning("WARNING: Macro %s not found in subscriptions dict!", macro_name)
                 
@@ -475,45 +520,58 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
         _LOGGER.info("SUCCESS: Subscribed to retained commands topic: %s", commands_topic)
 
     async def _subscribe_macro_trigger(self, macro_name: str) -> None:
-        """Subscribe to macro trigger topic for state tracking."""
-        topic = f"{self.base_topic}/macro/{macro_name}/trigger"
+        """Subscribe to macro status topic for state tracking.
+        
+        Note: Changed from 'trigger' to 'status' topic.
+        - trigger: Used for commands (integration → RS90)
+        - status: Used for state feedback (RS90 → integration)
+        This ensures we get state updates when macros are triggered from the remote.
+        """
+        topic = f"{self.base_topic}/macro/{macro_name}/status"  # Changed from /trigger to /status
         
         @callback
-        def handle_macro_trigger(payload: str) -> None:
-            """Handle macro trigger state."""
-            state = payload.strip().lower()
-            _LOGGER.debug("Macro %s trigger state received: %s", macro_name, state)
+        def handle_macro_status(payload: str) -> None:
+            """Handle macro status state.
             
-            # Store the macro state in memory only
-            if state in ["on", "off"]:
-                self.data["macro_states"][macro_name] = state
-                _LOGGER.info("SUCCESS: Macro '%s' state updated to: %s", macro_name, state)
+            Payload format: "ON" or "OFF" (uppercase from RS90)
+            
+            This is the authoritative source of macro state.
+            The /trigger topic is ephemeral (retain=False), only /status persists.
+            """
+            state = payload.strip().upper()  # RS90 sends uppercase
+            _LOGGER.debug("Macro %s status received: %s", macro_name, state)
+            
+            # Convert to lowercase for internal storage
+            if state in ["ON", "OFF"]:
+                internal_state = state.lower()
+                self.data["macro_states"][macro_name] = internal_state
+                _LOGGER.info("SUCCESS: Macro '%s' state updated to: %s", macro_name, internal_state)
                 self.async_set_updated_data(self.data)
             else:
-                _LOGGER.warning("Invalid macro state '%s' for macro '%s', expected 'on' or 'off'", state, macro_name)
+                _LOGGER.warning("Invalid macro state '%s' for macro '%s', expected 'ON' or 'OFF'", state, macro_name)
         
-        # FIX v1.2.8: Use QoS 0 for monitoring (subscribe), QoS 1 only for control (publish)
-        # Don't add to global subscriptions as we track macros separately
-        unsubscribe = await self._subscribe(topic, handle_macro_trigger, qos=0, add_to_global=False)
+        # Subscribe with QoS 0 for monitoring
+        unsubscribe = await self._subscribe(topic, handle_macro_status, qos=0, add_to_global=False)
         
         # Only add to tracking if subscription succeeded
         if unsubscribe:
             self._macro_subscriptions[macro_name] = unsubscribe
             self._subscribed_macros.add(macro_name)  # Add AFTER successful subscription
-            _LOGGER.info("SUCCESS: Subscribed to macro trigger: %s", topic)
+            _LOGGER.info("SUCCESS: Subscribed to macro status: %s", topic)
         else:
-            _LOGGER.error("Failed to subscribe to macro trigger: %s", topic)
+            _LOGGER.error("Failed to subscribe to macro status: %s", topic)
 
     async def async_trigger_macro(self, macro_name: str, action: str = "on") -> None:
         """Trigger a macro with ON or OFF action."""
         topic = f"{self.base_topic}/macro/{macro_name}/trigger"
         _LOGGER.debug("Triggering macro: %s with action: %s", macro_name, action)
         
-        # Publish WITH retain - macro state is persistent (as per Haptique API doc)
-        _LOGGER.debug("MQTT PUBLISH (MACRO): topic='%s', payload='%s', qos=1, retain=True", topic, action)
-        await mqtt.async_publish(self.hass, topic, action, qos=1, retain=True)
+        # Publish WITHOUT retain - trigger is a command, not a state
+        # State is tracked via the separate /status topic (published by RS90)
+        _LOGGER.debug("MQTT PUBLISH (MACRO): topic='%s', payload='%s', qos=1, retain=False", topic, action)
+        await mqtt.async_publish(self.hass, topic, action, qos=1, retain=False)
         
-        # Update local state immediately (will be confirmed by MQTT callback)
+        # Update local state immediately (will be confirmed by status topic)
         self.data["macro_states"][macro_name] = action
         self.async_set_updated_data(self.data)
 
@@ -689,7 +747,7 @@ class HaptiqueRS90Coordinator(DataUpdateCoordinator):
             if new_macros:
                 _LOGGER.info("NEW: Found %d new unsubscribed macros: %s", len(new_macros), new_macros)
                 for macro_name in new_macros:
-                    _LOGGER.info("Subscribing to trigger for: %s", macro_name)
+                    _LOGGER.info("Subscribing to status for: %s", macro_name)
                     await self._subscribe_macro_trigger(macro_name)
             else:
                 _LOGGER.info("No new macros to subscribe to")

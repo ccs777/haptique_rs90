@@ -1,248 +1,133 @@
-# Changelog
+# Changelog - Haptique RS90 Home Assistant Integration
 
 All notable changes to this project will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.0] - 2025-12-18
+---
 
-### ⚠️ BREAKING CHANGES
+## [1.7.0] - 2025-01-XX
 
-This release includes **breaking changes** to service parameters. All automations and scripts using Haptique RS90 services **must be updated**.
+### ✨ New Features
 
-#### 🔄 Service Parameters Renamed
+#### Event-Based Key Press Detection
+- **Fire events on every button press**, including repeated presses of the same button
+- New event: `haptique_rs90_key_pressed` with data: `remote_id`, `device_id`, `button`, `timestamp`
+- Enables **dual functionality**: RS90 macro execution + Home Assistant automation from single button press
+- Solves issue where pressing the same button twice didn't trigger automations
 
-| Old Parameter (v1.2.8) | New Parameter (v1.5.0) | Service |
-|------------------------|------------------------|---------|
-| `device_id` | `rs90_id` | All services |
-| `macro_name` | `rs90_macro_id` | `trigger_macro` |
-| `device_name` | `rs90_device_id` | `trigger_device_command` |
-
-**Migration Required**: See [MIGRATION_GUIDE_v1.5.0.md](MIGRATION_GUIDE_v1.5.0.md)
-
-#### 🎯 What Changed
-
-**1. Service Parameters - Breaking Changes**
-
-All service parameters have been renamed for clarity and consistency:
-
+**Example usage:**
 ```yaml
-# OLD (v1.2.8) - NO LONGER WORKS
-service: haptique_rs90.trigger_macro
-data:
-  device_id: "6f99751e78b5a07de72d549143e2975c"
-  macro_name: "Watch Movie"
-  action: "on"
-
-# NEW (v1.5.0) - REQUIRED
-service: haptique_rs90.trigger_macro
-data:
-  rs90_id: "6f99751e78b5a07de72d549143e2975c"
-  rs90_macro_id: "692eb1561bddd5814022960c"
-  action: "on"
+automation:
+  trigger:
+    - platform: event
+      event_type: haptique_rs90_key_pressed
+      event_data:
+        button: 13
 ```
 
-**Reason**: 
-- `device_id` was ambiguous (RS90 remote? Controlled device?)
-- `rs90_id` clearly indicates it's the RS90 remote's Home Assistant device ID
-- All IDs now use stable internal identifiers instead of names
+#### Device Triggers for Native UI Support
+- **24 button triggers** (1-24) available in Home Assistant automation UI
+- No manual YAML needed - fully visual automation builder compatible
+- Select RS90 device and button directly from dropdown menus
 
-**2. New Sensor: Macro Info**
-
-Created `sensor.macro_{name}_info` for each macro:
-- **State**: `available` (sensor serves to expose attributes)
-- **Attributes**:
-  - `rs90_macro_id`: Stable ID for service calls
-  - `macro_name`: Current macro name
-  - `current_state`: on/off state
-
-**Purpose**: Easy access to macro IDs for services and automations
-
-**3. Entity Attributes Renamed**
-
-| Entity Type | Old Attribute | New Attribute |
-|------------|--------------|---------------|
-| `sensor.*_commands_*` | `haptique_device_id` | `rs90_device_id` |
-| `switch.macro_*` | `macro_id` | `rs90_macro_id` |
-
-**4. Ultra-Stable Entity IDs**
-
-Entity unique IDs now based on internal Haptique IDs:
-- **Macros**: `{remote_id}_macro_{macro_id}`
-- **Devices**: `{remote_id}_commands_{device_id}`
-
-**Benefit**: Entity IDs never change, even when renaming in Haptique Config
-
-**5. Automatic Friendly Name Updates**
-
-When you rename a device or macro in Haptique Config:
-- ✅ Entity ID stays stable (automations don't break)
-- ✅ Friendly name updates automatically in Home Assistant
-- ✅ No manual intervention needed
-
-**Example**:
+**Example (UI-generated):**
 ```yaml
-# Before rename
-Entity ID: sensor.salon_commands_canal
-Friendly Name: Commands - Canal
-
-# After rename "Canal" → "Canal+" in Haptique Config
-Entity ID: sensor.salon_commands_canal        # ← Unchanged
-Friendly Name: Commands - Canal+        # ← Updated automatically
+trigger:
+  - platform: device
+    device_id: [your_rs90]  # From sensor.rs90_info_summary → rs90_id
+    domain: haptique_rs90
+    type: button_pressed
+    button: 13
 ```
 
-**6. Professional Logging**
+#### Macro Status Synchronization
+- **New MQTT topic**: Subscribe to `macro/{MacroName}/status` for state feedback
+  - ⚠️ **Requires updated RS90 firmware** (upcoming release from Haptique - check with Haptique support for availability)
+- **Proper state tracking** when macros are triggered from RS90 remote
+- Switch entities now accurately reflect macro state regardless of trigger source
+- Clean MQTT architecture: Commands (`/trigger`) separated from state (`/status`)
 
-All emoji removed from logs for cleaner, more professional output:
-- `📥 MQTT` → `MQTT`
-- `✓` → `SUCCESS:`
-- `🔄` → `RENAME:`
+**Technical details:**
+- Command topic: `macro/{MacroName}/trigger` (retain=False, ephemeral)
+- Status topic: `macro/{MacroName}/status` (retain=True by RS90, authoritative state)
+- No synchronization loops or duplicate commands
 
-#### 📋 Migration Steps
+#### MQTT RemoteID Exposure
+- Added `rs90_remote_id` attribute to `sensor.rs90_info_summary`
+- Makes MQTT RemoteID easily discoverable for debugging and manual MQTT operations
 
-1. **Find your IDs**:
-   - `rs90_macro_id`: Check `sensor.macro_{name}_info` or `switch.macro_{name}` attributes
-   - `rs90_device_id`: Check `sensor.commands_{name}` attributes
-   - `rs90_id`: Check RS90 device page URL
-
-2. **Update automations**:
-   - Replace `device_id` with `rs90_id`
-   - Replace `macro_name` with `rs90_macro_id`
-   - Replace `device_name` with `rs90_device_id`
-
-3. **Update Lovelace templates**:
-   - Use dynamic lookups: `{{ state_attr('sensor.salon_commands_canal', 'rs90_device_id') }}`
-
-4. **Test everything**
-
-**See detailed guide**: [MIGRATION_GUIDE_v1.5.0.md](MIGRATION_GUIDE_v1.5.0.md)
-
-#### 📦 Files Modified
-
-**Core Integration**:
-- `services.yaml` / `services.fr.yaml` - Parameters renamed
-- `__init__.py` - Service handlers updated
-- `sensor.py` - New macro info sensor + attribute renamed
-- `switch.py` - Attribute renamed
-- `translations/en.json` / `fr.json` - Service descriptions
-
-**Templates**:
-- `templates/device_buttons_card.yaml` - Updated for new parameters
-- `templates/example_canal_plus.yaml` - Updated for new parameters
-- `templates/README.md` - Migration guide
-- `templates/README_FR.md` - Guide de migration
-
-**Documentation**:
-- `MIGRATION_GUIDE_v1.5.0.md` - Complete migration guide (NEW)
-- `CHANGELOG.md` - This file
-- `README.md` - Updated examples
-
-#### ⚡ Performance & Stability
-
-- Thread-safe rename detection
-- Entity Registry integration for instant UI updates
-- Improved error handling
-- Better attribute exposure
-
-#### 🌍 Translations
-
-- Complete EN/FR translations for all services
-- Service descriptions updated in both languages
-
----
-
----
-
-### 🔄 Migration Guide: 1.2.8 → 1.5.0
-
-#### What Changed
-
-**Services**:
-- ✅ New parameters: `macro_id`, `haptique_device_id` (recommended)
-- ⚠️ Deprecated: `macro_name`, `device_name` (still work, but discouraged)
-
-**Entity Stability**:
-- ✅ Unique IDs now based on internal IDs (ultra-stable)
-- ✅ Friendly names update automatically on rename
-- ⚠️ Entity IDs may change on first upgrade (one-time only)
-
-#### Migration Steps
-
-**Option A: Keep Using Names (No Changes Required)**
+**Example attributes:**
 ```yaml
-# Your existing automations continue to work
-service: haptique_rs90.trigger_macro
-data:
-  device_id: 1234567890abcdef
-  macro_name: "Watch Movie"  # ← Still works with deprecation warning
+sensor.rs90_info_summary:
+  rs90_id: "9b974dab9a7649e13baeb921d4c9bb85"  # HA Device ID
+  rs90_remote_id: "3d5d95aa3a7f7b20"  # MQTT RemoteID (new!)
+  rs90_device_name: "RS90"
+  devices: {...}
+  macros: {...}
 ```
 
-**Option B: Migrate to IDs (Recommended)**
+### 🔧 Improvements
 
-1. **Find the ID** in entity attributes:
-   - Go to Settings > Devices & Services > Haptique RS90
-   - Click on a macro switch or device sensor
-   - Look for `haptique_macro_id` or `haptique_device_id` in attributes
+#### Battery Refresh Optimizations
+- **Automatic refresh on reconnection**: Battery level requested immediately when RS90 wakes from sleep
+- **Optimized for sleep/wake cycles**: Up to 6x more frequent updates when RS90 is off charging dock
+- **Throttle protection**: Minimum 5 minutes between refreshes to prevent spam during unstable connections
+- **Reduced timer interval**: Periodic refresh every 30 minutes (was 60 minutes)
 
-2. **Update your automations**:
-```yaml
-# Old way
-service: haptique_rs90.trigger_macro
-data:
-  device_id: 1234567890abcdef
-  macro_name: "Watch Movie"
+**Refresh frequency:**
+- On charging dock (always online): Every 30 minutes
+- Off dock (sleep/wake ~10 min): Every ~10 minutes on wake
+- Unstable connection (<5 min disconnect/reconnect): Throttled to max 1 refresh per 5 minutes
 
-# New way (recommended)
-service: haptique_rs90.trigger_macro
-data:
-  device_id: 1234567890abcdef
-  macro_id: "692eb1561bddd5814022960c"  # ← Copy from attributes
-```
+#### Battery Refresh in `refresh_lists` Service
+- Service `refresh_lists` now also requests battery level update
+- Useful for manual refresh without waiting for automatic intervals
 
-3. **Test** your automations
+### 🐛 Bug Fixes
 
-#### Benefits of Migrating
+- Fixed macro state not updating when triggered from RS90 remote
+- Fixed potential MQTT publish loops during macro state synchronization
+- Fixed battery level not updating during RS90 sleep/wake cycles
 
-- 🎯 **Rename-proof**: IDs never change, even if you rename in Haptique Config
-- 🚀 **More reliable**: No confusion between devices/macros with similar names
-- 📝 **Future-proof**: Prepared for eventual removal of name-based parameters
+### 📝 Documentation
 
----
+- Added comprehensive examples for event-based automations
+- Documented device trigger usage in automation UI
+- Explained macro status synchronization architecture
+- Added battery refresh behavior documentation
 
-## [1.2.8] - 2025-12-12
+### ⚠️ Breaking Changes
 
-### ✨ Major Improvements
+**None** - This release is fully backward compatible with v1.5.1.
 
-This release brings automatic device command discovery and battery monitoring improvements.
+### 🙏 Credits
 
-#### 🎯 New Features
-- **Automatic Device Commands Discovery**: New devices added in Haptique Config now automatically appear with their commands
-- **Automatic Battery Refresh**: Battery level now updates automatically every hour
+- **Macro status synchronization**: Special thanks to **Haptique Support** for implementing the `/status` topic and providing excellent collaboration!
+- **Event detection issue**: Reported and validated by @Benz63Amg in issue #35
 
-#### 🔧 Improvements
-- **Enhanced refresh_lists Service**: Improved to actively re-scan and subscribe to new devices/macros
-- **Better MQTT Compliance**: Fixed final QoS issue with macro trigger subscriptions
+### 📋 Requirements
 
-#### 🐛 Bug Fixes
-- **Fixed Integration Reload Error**: Resolved "Cannot unsubscribe topic twice" error
-
----
-
-## Version Comparison Table
-
-| Feature | 1.2.8 | 1.5.0 |
-|---------|-------|-------|
-| **Entity Unique IDs** | Name-based | ID-based (stable) |
-| **Friendly Name Updates** | Manual | Automatic |
-| **Service Parameters** | `macro_name`, `device_name` | `macro_id`, `haptique_device_id` (recommended) |
-| **Logging Style** | Emojis | Professional text-only |
-| **Rename Detection** | No | Yes (instant UI update) |
-| **Entity Stability** | Good | Excellent |
-| **Migration Required** | No | Optional (recommended) |
+- **RS90 Firmware**: Macro status synchronization requires updated RS90 firmware with `/status` topic support
+  - This feature will be available in an upcoming firmware release
+  - Contact Haptique support for firmware availability and update instructions
+  - All other features work with current firmware versions
+- **Home Assistant**: 2024.1.0 or newer
+- **MQTT**: Configured and working
 
 ---
 
-## Support
+## [1.5.1] - 2024-12-XX
 
-- **Issues**: https://github.com/daangel27/haptique_rs90/issues
-- **Discussions**: https://github.com/daangel27/haptique_rs90/discussions
-- **Documentation**: https://github.com/daangel27/haptique_rs90
+### Previous stable release
+
+See GitHub releases for details: https://github.com/daangel27/haptique_rs90/releases
+
+---
+
+## Links
+
+- [GitHub Repository](https://github.com/daangel27/haptique_rs90)
+- [Issue Tracker](https://github.com/daangel27/haptique_rs90/issues)
+- [Documentation](https://github.com/daangel27/haptique_rs90/blob/main/README.md)
