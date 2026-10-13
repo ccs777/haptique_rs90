@@ -12,12 +12,17 @@ Real macros and command sequences each have an ON/OFF switch. Discovery
 accepts both `id` and the older `Id` spelling. IDs remain stable when names
 change. A sequence formerly exposed as a macro reuses its registered switch
 identity after moving to sequence discovery, preserving automation references.
+Migration ownership is persisted in entity-registry capabilities, so a later
+ID conflict or restart cannot redirect an existing automation to another target.
 Removed targets become unavailable; their registry entries remain so they
 can return without losing user customizations. Malformed inventories do not
 erase the last valid snapshot; a valid empty array clears the inventory.
 
 Name-based feedback is accepted only for unambiguous aliases. ID feedback
-takes precedence. If modern macro and sequence inventories advertise the
+takes precedence for modern targets. Unmarked legacy inventory continues to
+accept unique name feedback after an ID query because older firmware reports
+subsequent execution by name. Historical sequence aliases which collide with
+a real macro ID are ignored, including their execution results. If modern macro and sequence inventories advertise the
 same ID, both controls become unavailable and calls fail with an inventory
 conflict rather than dispatching to a guessed target.
 

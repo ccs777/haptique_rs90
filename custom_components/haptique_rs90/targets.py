@@ -145,7 +145,14 @@ class TargetManager:
             kind, target_id = key
             if self.conflicting(target_id):
                 continue
-            references = [(target_id, True)]
+            # A sequence requested by name publishes a historical macro alias.
+            # Without request IDs, that alias is indistinguishable from the
+            # real macro's canonical feedback when the name equals its ID.
+            unsafe_id = kind == "macro" and any(
+                other_kind == "sequence" and item["name"] == target_id
+                for (other_kind, _), item in items.items()
+            )
+            references = [] if unsafe_id else [(target_id, True)]
             name = record["name"]
             same_name = [other for other, item in items.items() if item["name"] == name]
             if (
@@ -200,7 +207,9 @@ class TargetManager:
         if topic.endswith("/status"):
             state = payload.strip().upper()
             if state not in ("ON", "OFF", "UNKNOWN") or (
-                not canonical and key in self._canonical_received
+                not canonical
+                and key in self._canonical_received
+                and not (key[0] == "macro" and "type" not in self.require(*key))
             ):
                 return
             if canonical:

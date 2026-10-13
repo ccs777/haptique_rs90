@@ -24,12 +24,20 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][entry.entry_id]
     registry = er.async_get(hass)
     prefix = f"{entry.data[CONF_REMOTE_ID]}_macro_"
-    legacy_ids = {
-        entity.unique_id[len(prefix) :]
+    registered = {
+        entity.unique_id: entity
         for entity in er.async_entries_for_config_entry(registry, entry.entry_id)
-        if entity.domain == "switch"
-        and entity.platform == DOMAIN
-        and entity.unique_id.startswith(prefix)
+        if entity.domain == "switch" and entity.platform == DOMAIN
+    }
+    owners = {
+        unique_id: (entity.capabilities or {}).get("haptique_target_kind")
+        for unique_id, entity in registered.items()
+    }
+    legacy_ids = {
+        unique_id[len(prefix) :]
+        for unique_id, entity in registered.items()
+        if unique_id.startswith(prefix)
+        and (entity.capabilities or {}).get("haptique_legacy_macro") is not False
     }
     entities: dict[str, HaptiqueRS90MacroSwitch] = {}
 
@@ -43,20 +51,33 @@ async def async_setup_entry(
         additions = []
         for (kind, target_id), record in coordinator.targets.items().items():
             identity_kind = kind
-            if kind == "sequence" and target_id in legacy_ids:
+            old_unique_id = f"{prefix}{target_id}"
+            if owners.get(old_unique_id) == "sequence":
+                # Once migrated, the historical identity permanently belongs
+                # to that sequence, including across restart and ID conflicts.
+                identity_kind = "macro" if kind == "sequence" else "real_macro"
+            elif kind == "sequence" and target_id in legacy_ids:
                 # Wait for macro/list before deciding whether a registered identity
                 # belongs to a real macro or to a migrated legacy sequence.
                 if "macro" not in coordinator.targets.seen:
                     continue
                 own_id = f"{entry.data[CONF_REMOTE_ID]}_sequence_{target_id}"
-                if not coordinator.targets.target(
-                    "macro", target_id
-                ) and not registry.async_get_entity_id("switch", DOMAIN, own_id):
+                if (
+                    not coordinator.targets.target("macro", target_id)
+                    and own_id not in entities
+                    and not registry.async_get_entity_id("switch", DOMAIN, own_id)
+                ):
                     identity_kind = "macro"
             unique_id = f"{entry.data[CONF_REMOTE_ID]}_{identity_kind}_{target_id}"
             if unique_id not in entities:
                 entity = HaptiqueRS90MacroSwitch(
-                    coordinator, entry, target_id, record["name"], kind, identity_kind
+                    coordinator,
+                    entry,
+                    target_id,
+                    record["name"],
+                    kind,
+                    identity_kind,
+                    kind == "macro" and "type" not in record,
                 )
                 entities[unique_id] = entity
                 additions.append(entity)
@@ -64,6 +85,16 @@ async def async_setup_entry(
                 entity = entities[unique_id]
                 entity._target_kind = kind
                 entity._macro_name = record["name"]
+                entity._legacy = kind == "macro" and "type" not in record
+            owners[unique_id] = kind
+            if registry_id := registry.async_get_entity_id("switch", DOMAIN, unique_id):
+                existing = registry.async_get(registry_id)
+                capabilities = {
+                    **(existing.capabilities or {}),
+                    **entity.capability_attributes,
+                }
+                if capabilities != existing.capabilities:
+                    registry.async_update_entity(registry_id, capabilities=capabilities)
         if additions:
             async_add_entities(additions)
 
@@ -82,15 +113,25 @@ class HaptiqueRS90MacroSwitch(CoordinatorEntity, SwitchEntity):
         macro_name: str,
         target_kind: str = "macro",
         identity_kind: str = "macro",
+        legacy: bool = False,
     ) -> None:
         super().__init__(coordinator)
         self._switch_id = macro_id
         self._macro_name = macro_name
         self._target_kind = target_kind
+        self._legacy = legacy
         self._attr_unique_id = (
             f"{entry.data[CONF_REMOTE_ID]}_{identity_kind}_{macro_id}"
         )
         self._attr_device_info = {"identifiers": {(DOMAIN, entry.data[CONF_REMOTE_ID])}}
+
+    @property
+    def capability_attributes(self) -> dict[str, Any]:
+        """Persist migration ownership without changing config-entry settings."""
+        return {
+            "haptique_target_kind": self._target_kind,
+            "haptique_legacy_macro": self._legacy,
+        }
 
     @property
     def name(self) -> str:

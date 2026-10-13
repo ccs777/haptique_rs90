@@ -88,3 +88,57 @@ async def test_conflict_does_not_transfer_macro_identity(hass, coordinator):
         "remote-1_macro_x": "macro",
         "remote-1_sequence_x": "sequence",
     }
+
+
+async def test_migrated_identity_does_not_transfer_during_later_conflict(
+    hass, coordinator
+):
+    entities = await setup_switches(hass, coordinator)
+    await message(hass, "status", "online")
+    await inventory(hass, "macro", [{"id": "s1", "name": "Legacy"}])
+    migrated = entities[0]
+    await inventory(hass, "macro", [])
+    await inventory(hass, "sequence", [{"id": "s1", "name": "Sequence"}])
+    assert migrated.extra_state_attributes["target_kind"] == "sequence"
+    await inventory(hass, "macro", [{"id": "s1", "name": "Real", "type": "macro"}])
+    assert migrated.extra_state_attributes["target_kind"] == "sequence"
+    assert not migrated.available
+    assert len(entities) == 2
+    await inventory(hass, "macro", [])
+    assert migrated.available
+    assert len(entities) == 2
+    await inventory(hass, "macro", [{"id": "s1", "name": "Real", "type": "macro"}])
+    await inventory(hass, "sequence", [])
+    assert not migrated.available
+    assert migrated.extra_state_attributes["target_kind"] == "sequence"
+
+
+async def test_persisted_migration_ownership_survives_platform_restart(
+    hass, coordinator
+):
+    registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "switch",
+        "haptique_rs90",
+        "remote-1_macro_s1",
+        config_entry=coordinator.entry,
+        capabilities={"haptique_target_kind": "sequence"},
+    )
+    entities = await setup_switches(hass, coordinator)
+    await inventory(hass, "macro", [{"id": "s1", "name": "Real", "type": "macro"}])
+    await inventory(hass, "sequence", [{"id": "s1", "name": "Sequence"}])
+    assert {e.unique_id: e.extra_state_attributes["target_kind"] for e in entities} == {
+        "remote-1_macro_s1": "sequence",
+        "remote-1_real_macro_s1": "macro",
+    }
+
+
+async def test_pending_new_sequence_keeps_identity_when_legacy_alias_arrives(
+    hass, coordinator
+):
+    entities = await setup_switches(hass, coordinator)
+    await inventory(hass, "sequence", [{"id": "s1", "name": "Sequence"}])
+    # Entity registration can lag behind independent inventory callbacks.
+    await inventory(hass, "macro", [{"id": "s1", "name": "Legacy alias"}])
+    assert len(entities) == 1
+    assert entities[0].unique_id == "remote-1_sequence_s1"

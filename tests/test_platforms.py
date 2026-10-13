@@ -31,6 +31,10 @@ async def test_registered_switch_survives_sequence_migration(
         assert hass.states.get(entity_id).state == "unavailable"
         await inventory(hass, "sequence", [{"id": "s1", "name": "Renamed"}])
         assert registry.async_get(entity_id).unique_id == "remote-1_macro_s1"
+        assert (
+            registry.async_get(entity_id).capabilities["haptique_target_kind"]
+            == "sequence"
+        )
         assert hass.states.get(entity_id).attributes["target_kind"] == "sequence"
         await message(hass, "sequence/s1/status", "OFF")
         assert hass.states.get(entity_id).state == "off"

@@ -98,7 +98,7 @@ async def test_duplicate_names_and_id_alias_precedence(hass, coordinator):
     await message(hass, "macro/a/status", "OFF")
     assert coordinator.targets.state("macro", "a") == "off"
     assert coordinator.targets.state("macro", "c") is None
-    await inventory(hass, "macro", [{"id": "a", "name": "Movie"}])
+    await inventory(hass, "macro", [{"id": "a", "name": "Movie", "type": "macro"}])
     await message(hass, "macro/a/status", "ON")
     await message(hass, "macro/Movie/status", "OFF")
     assert coordinator.targets.state("macro", "a") == "on"
@@ -200,3 +200,21 @@ async def test_remove_readd_before_reconciliation_queries_again(
     assert any(
         c.args[1] == f"{ROOT}/macro/m1/currentstatus" for c in publish.call_args_list
     )
+
+
+async def test_legacy_execution_name_feedback_follows_id_query(hass, coordinator):
+    await inventory(hass, "macro", [{"id": "s1", "name": "Movie"}])
+    await message(hass, "macro/s1/status", "OFF")
+    await message(hass, "macro/Movie/status", "ON")
+    assert coordinator.targets.state("macro", "s1") == "on"
+
+
+async def test_sequence_name_cannot_spoof_canonical_macro_feedback(hass, coordinator):
+    await inventory(hass, "macro", [{"id": "m1", "name": "Real", "type": "macro"}])
+    await inventory(hass, "sequence", [{"id": "s1", "name": "m1"}])
+    await message(hass, "macro/m1/status", "ON")
+    await message(hass, "macro/m1/result", '{"status":"executed"}')
+    assert coordinator.targets.state("macro", "m1") is None
+    assert coordinator.targets.result("macro", "m1") is None
+    await message(hass, "sequence/s1/status", "OFF")
+    assert coordinator.targets.state("sequence", "s1") == "off"
